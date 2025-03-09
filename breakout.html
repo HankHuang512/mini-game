@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打磚塊 demo</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #333;
+            color: white;
+        }
+        #container {
+            position: relative;
+            width: 80vw;
+            height: 80vh;
+            background-color: black;
+            border: 2px solid white;
+        }
+        #scoreBoard {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        #paddle {
+            width: 6rem;
+            height: 1rem;
+            background-color: grey;
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+        }
+        #ball {
+            position: absolute;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            background-color: rgb(255, 0, 123);
+        }
+        #bricks {
+            position: absolute;
+            width: 100%;
+            height: 20vh;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+        .brick {
+            width: 80px;
+            height: 30px;
+            background-color: lightgray;
+            position: absolute;
+        }
+        .score-popup {
+            position: absolute;
+            color: rgb(26, 255, 0);
+            font-weight: bold;
+            opacity: 1;
+            transition: transform 1s ease-out, opacity 1s ease-out;
+        }
+        #start {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 30px;
+            height: 2rem;
+            width: 6rem;
+            border-radius: 1rem;
+            background-color: rgb(255, 0, 123);
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .logo{
+            position: absolute;
+            width: 100vw;
+            top:0;
+            left:0;
+            display: flex;
+            padding: 1rem;
+            justify-content: center;
+        }
+        .logo>a{
+            flex:0;
+            width: 20%;
+            display: grid;
+            justify-items: center;
+            grid-template-columns: repeat(4,1fr);
+            gap:10px;
+        }
+        .logo div{
+            width: 40px;
+            aspect-ratio: 1;
+            background-color: white;
+        }
+        .cap-h{
+            clip-path: polygon(0% 0%, 50% 50%, 100% 0%, 100% 100%, 50% 50%, 0% 100%);
+        }
+        .cap-a{
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%)
+        }
+        .cap-n{
+            clip-path: polygon(0% 0%, 65% 100%, 65% 0%, 100% 0%, 100% 100%, 65% 100%, 0% 100%)
+        }
+        .cap-k{
+            clip-path: polygon(0% 0%, 35% 0%, 35% 50%, 100% 0%, 100% 100%, 35% 50%, 35% 100%, 0% 100%)
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">
+        <a href="/#">
+            <div class="cap-h"></div>
+            <div class="cap-a"></div>
+            <div class="cap-n"></div>
+            <div class="cap-k"></div>
+        </a>
+    </div>
+    <div id="container">
+        <div id="scoreBoard">分數: 0</div>
+        <div id="bricks"></div>
+        <div id="ball"></div>
+        <div id="paddle"></div>
+        <button id="start">START</button>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            alert("使用方向鍵← →來操作")
+            let step = 20;
+            let containerWidth = $("#container").width();
+            let containerHeight = $("#container").height();
+            let ballX = Math.random() * (containerWidth * 0.6) + (containerWidth * 0.2); // 隨機 X 位置
+            let ballY = containerHeight * 0.6;  // 初始 Y 位置
+            let dX = 4, dY = 4;
+            let score = 0;
+            let startGame = false;
+
+            // **設定球的初始位置（隨機 X，固定 Y）**
+            $("#ball").css({ left: ballX + "px", top: ballY + "px" });
+
+            function createBricks() {
+                $("#bricks").empty();
+                
+                let brickWidth = 80, brickHeight = 30, gap = 5;
+                let totalBrickWidth = (brickWidth * 10) + (gap * 9);
+                let totalBrickHeight = (brickHeight * 4) + (gap * 3);
+
+                let startX = (containerWidth - totalBrickWidth) / 2;
+                let startY = 0;
+
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 10; j++) {
+                        let brick = $("<div class='brick'></div>");
+                        let brickX = startX + j * (brickWidth + gap);
+                        let brickY = startY + i * (brickHeight + gap);
+                        brick.css({ left: brickX + "px", top: brickY + "px" });
+                        $("#bricks").append(brick);
+                    }
+                }
+            }
+
+            createBricks();
+
+            $("#start").click(function () {
+                let countdown = 3;
+                let timer = setInterval(function () {
+                    $("#start").text(countdown);
+                    countdown--;
+                    if (countdown < 0) {
+                        clearInterval(timer);
+                        $("#start").hide();
+                        startGame = true;
+                    }
+                }, 1000);
+            });
+
+            function ballMove() {
+                if (!startGame) return;
+
+                ballX += dX;
+                ballY += dY;
+                $("#ball").css({ left: ballX + "px", top: ballY + "px" });
+
+                // 邊界反彈
+                if (ballX <= 0 || ballX >= containerWidth - $("#ball").width()) {
+                    dX *= -1;
+                }
+                if (ballY <= 0) {
+                    dY *= -1;
+                }
+                if (ballY >= containerHeight - $("#ball").height()) {
+                    startGame = false;
+                    alert("你輸了，遊戲結束！");
+                    location.reload();
+                }
+
+                if($(".brick").length===0){
+                    startGame = false;
+                    alert("你贏了，遊戲結束!");
+                    location.reload();
+                }
+
+                // 碰撞 paddle
+                let paddleX = parseFloat($("#paddle").css("left"));
+                let paddleY = $("#paddle").position().top;
+                let paddleW = $("#paddle").width();
+                if (ballY + $("#ball").height() >= paddleY &&
+                    ballX + $("#ball").width() >= paddleX &&
+                    ballX <= paddleX + paddleW) {
+                    dY *= -1;
+                }
+
+                // 碰撞磚塊
+                $(".brick").each(function () {
+                    let brick = $(this);
+                    let brickX = brick.position().left;
+                    let brickY = brick.position().top;
+                    let brickW = brick.width();
+                    let brickH = brick.height();
+
+                    if (ballX + $("#ball").width() >= brickX &&
+                        ballX <= brickX + brickW &&
+                        ballY + $("#ball").height() >= brickY &&
+                        ballY <= brickY + brickH) {
+
+                        brick.remove();
+                        dY *= -1;
+                        score += 10;
+                        $("#scoreBoard").text("分數: " + score);
+
+                        // **+10 分特效**
+                        let popup = $("<div class='score-popup'>+10</div>");
+                        popup.css({ left: brickX + "px", top: brickY + "px" });
+                        $("#container").append(popup);
+                        setTimeout(() => {
+                            popup.css({ transform: "translateY(-20px)", opacity: 0 });
+                            setTimeout(() => popup.remove(), 1000);
+                        }, 100);
+                    }
+                });
+            }
+            //每個frame更新畫面
+            function update() {
+                ballMove();
+                requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+
+            $(document).keydown(function (event) {
+                let paddle = $("#paddle");
+                let paddleX = parseFloat(paddle.css("left"));
+                let paddleW = paddle.width();
+                let containerW = $("#container").width();
+
+                if (event.key === "ArrowLeft") {
+                    let newX = Math.max(0, paddleX - step);
+                    paddle.css("left", newX + "px");
+                } else if (event.key === "ArrowRight") {
+                    let newX = Math.min(containerW - paddleW, paddleX + step);
+                    paddle.css("left", newX + "px");
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>

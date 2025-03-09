@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圈圈叉叉</title>
+    <style>
+        *{
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        body{
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: grid;
+            justify-items: center;
+            align-items: center;
+            background-color: #333;
+        }
+        h2{
+            font-family: Arial;
+            font-weight:bold;
+            font-size: 2.25rem;
+            color: white;
+        }
+        .board{
+            width: 80vh;
+            aspect-ratio: 1;
+            border: 3px solid black;
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            background-color: white;
+        }
+        .tile{
+            width: 100%;
+            aspect-ratio: 1;
+            border: 1px solid black;
+            font-size: 5rem;
+            font-family: Arial;
+            font-weight: bolder;
+            text-align: center;
+            padding-top: 20%;
+        }
+        #restart{
+            width: 5rem;
+            height: 2rem;
+            border-radius: 1rem;
+            border: none;
+            background-color: rgb(255, 0, 123);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition:transform 0.3s ease;
+        }
+        #restart:hover{
+            transform: scale(1.05);
+        }
+        .tile {
+            transition: background-color 0.3s ease;
+        }
+
+        .tile:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        .logo{
+            position: absolute;
+            width: 100vw;
+            top:0;
+            left:0;
+            display: flex;
+            padding: 1rem;
+            justify-content: flex-start;
+        }
+        .logo>a{
+            flex:0;
+            width: 20%;
+            display: grid;
+            justify-items: center;
+            grid-template-columns: repeat(4,1fr);
+            gap:10px;
+        }
+        .logo div{
+            width: 40px;
+            aspect-ratio: 1;
+            background-color: white;
+        }
+        .cap-h{
+            clip-path: polygon(0% 0%, 50% 50%, 100% 0%, 100% 100%, 50% 50%, 0% 100%);
+        }
+        .cap-a{
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%)
+        }
+        .cap-n{
+            clip-path: polygon(0% 0%, 65% 100%, 65% 0%, 100% 0%, 100% 100%, 65% 100%, 0% 100%)
+        }
+        .cap-k{
+            clip-path: polygon(0% 0%, 35% 0%, 35% 50%, 100% 0%, 100% 100%, 35% 50%, 35% 100%, 0% 100%)
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">
+        <a href="/#">
+            <div class="cap-h"></div>
+            <div class="cap-a"></div>
+            <div class="cap-n"></div>
+            <div class="cap-k"></div>
+        </a>
+    </div>
+    <div class="board"></div>
+    <button id="restart" onclick="location.reload()">重新開始</button>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            //棋盤陣列
+            let board = [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0]
+            ];
+
+            //預設玩家
+            let currentPlayer = "X";
+
+            //勝利條件
+            function checkWinner() {
+                for (let i = 0; i < 3; i++) {
+                    if (board[i][0] !== 0 && board[i][0] === board[i][1] && board[i][1] === board[i][2]) {
+                        return board[i][0];
+                    }
+                    if (board[0][i] !== 0 && board[0][i] === board[1][i] && board[1][i] === board[2][i]) {
+                        return board[0][i];
+                    }
+                }
+                if (board[0][0] !== 0 && board[0][0] === board[1][1] && board[1][1] === board[2][2]) {
+                    return board[0][0];
+                }
+                if (board[0][2] !== 0 && board[0][2] === board[1][1] && board[1][1] === board[2][0]) {
+                    return board[0][2];
+                }
+                return null;
+            }
+
+            //檢查棋盤是否已滿
+            function isBoardFull() {
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        if (board[i][j] === 0) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+
+            //動態生成棋盤
+            for(let row = 0; row < 3; row++){
+                for(let col = 0; col < 3; col++){
+                    $(".board").append(
+                        `<div class="tile" data-row=${row} data-col=${col}></div>`
+                    );
+                }
+            }
+
+            //每次落子檢查
+            $(".board").on("click", ".tile", function() {
+                let row = $(this).data("row");
+                let col = $(this).data("col");
+
+                //落子
+                if (board[row][col] === 0) {
+                    $(this).text(currentPlayer);
+                    board[row][col] = currentPlayer;
+
+                    //Debug用
+                    // console.log("目前玩家:", currentPlayer);
+                    // console.log("目前棋盤狀態:", board);
+
+                    let winner = checkWinner();
+                    let isFull = isBoardFull();
+
+                    //檢查勝利或滿版
+                    if (winner !== null || isFull) {
+                        $(".tile").off("click");  
+                        setTimeout(function(){
+                            if (winner !== null) {
+                                alert("恭喜 " + winner + " 玩家勝利");
+                                $(".board").css("pointer-events","none")
+                            } else {
+                                alert("遊戲結束，平手!");
+                            }
+                        }, 500);
+                        return;
+                    }
+
+                    // 玩家切換
+                    currentPlayer = (currentPlayer === "X") ? "O" : "X";
+                }
+            });
+
+            $(".board").on("mouseenter", ".tile", function() {
+                if ($(this).text() === "") {
+                    $(this).css("background-color", "rgba(0, 0, 0, 0.1)");
+                }
+            });
+
+            $(".board").on("mouseleave", ".tile", function() {
+                $(this).css("background-color", "");
+            });
+
+            $(".board").on("click", ".tile", function() {
+                let row = $(this).data("row");
+                let col = $(this).data("col");
+
+                if (board[row][col] === 0) {
+                    $(this).hide().text(currentPlayer).fadeIn(300);
+                    board[row][col] = currentPlayer;
+
+                    let winner = checkWinner();
+                    let isFull = isBoardFull();
+
+                    if (winner !== null || isFull) {
+                        $(".tile").off("click");  
+                        setTimeout(function(){
+                            if (winner !== null) {
+                                alert("恭喜 " + winner + " 玩家勝利");
+                            } else {
+                                alert("遊戲結束，平手!");
+                            }
+                        }, 500);
+                        return;
+                    }
+
+                    currentPlayer = (currentPlayer === "X") ? "O" : "X";
+                }
+            });
+
+        });
+
+
+    </script>
+</body>
+</html>
