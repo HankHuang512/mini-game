@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>翻牌記憶</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        body {
+            height: 100vh;
+            width: 100vw;
+            display: grid;
+            place-items: center;
+            background-color: #333;
+        }
+        #timer{
+            font-family: Arial;
+            font-weight: bold;
+            font-size:1.5rem;
+            color: white;
+        }
+        .container {
+            border: 5px solid grey;
+            background-color: rgb(243, 243, 243);
+            border-radius: 30px;
+            height: 80vh;
+            width: 80vh;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 15px;
+            perspective: 1000px;
+            padding: 2.5rem;
+        }
+        .card {
+            background-color: white;
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            transform-style: preserve-3d;
+            transition: transform 0.5s;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+        .front, .back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            background-position: center;
+            background-size: cover;
+            backface-visibility: hidden;
+        }
+        .front {
+            background-image: url('/images/game image/card-back.jpg');
+        }
+        .back {
+            border:3px solid silver;
+            transform: rotateY(180deg);
+            background-position: center;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        .card1 .back { background-image: url('/images/game image/Epona.jpg'); }
+        .card2 .back { background-image: url('/images/game image/Aurora.jpg'); }
+        .card3 .back { background-image: url('/images/game image/Buckbeak.jpg'); }
+        .card4 .back { background-image: url('/images/game image/Kirin.jpg'); }
+        .card5 .back { background-image: url('/images/game image/Bullseye.jpg'); }
+        .card6 .back { background-image: url('/images/game image/Rapidash.jpg'); }
+        .card7 .back { background-image: url('/images/game image/Mob Horse.jpg'); }
+        .card8 .back { background-image: url('/images/game image/Marengo.jpg'); }
+        .cursor{
+            pointer-events: none;
+        }
+        .button{
+            width: 5rem;
+            height: 2rem;
+            border-radius: 1rem;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+        .button-active{
+            background-color: rgb(255, 0, 123);
+            color: white;
+        }
+        .button-disable{
+            pointer-events: none;
+            background-color: gray;
+            color: lightgray;
+        }
+        .logo{
+            position: absolute;
+            width: 100vw;
+            top:0;
+            left:0;
+            display: flex;
+            padding: 1rem;
+            justify-content: flex-start;
+        }
+        .logo>a{
+            flex:0;
+            width: 20%;
+            display: grid;
+            justify-items: center;
+            grid-template-columns: repeat(4,1fr);
+            gap:10px;
+        }
+        .logo div{
+            width: 40px;
+            aspect-ratio: 1;
+            background-color: white;
+        }
+        .cap-h{
+            clip-path: polygon(0% 0%, 50% 50%, 100% 0%, 100% 100%, 50% 50%, 0% 100%);
+        }
+        .cap-a{
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%)
+        }
+        .cap-n{
+            clip-path: polygon(0% 0%, 65% 100%, 65% 0%, 100% 0%, 100% 100%, 65% 100%, 0% 100%)
+        }
+        .cap-k{
+            clip-path: polygon(0% 0%, 35% 0%, 35% 50%, 100% 0%, 100% 100%, 35% 50%, 35% 100%, 0% 100%)
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">
+        <a href="/#">
+            <div class="cap-h"></div>
+            <div class="cap-a"></div>
+            <div class="cap-n"></div>
+            <div class="cap-k"></div>
+        </a>
+    </div>
+    <p id="timer">00:00:00</p>
+    <div class="container"></div>
+    <div class="button-contaner">
+        <button class="start button">START</button>
+        <button class="restart button">RESTART</button>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            let cardArray = [1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8];
+            let flippedCards = [];
+            let startTime, stoppedTime = 0;
+            let TimeInterval;
+            let isRunning = false;
+
+            let lastRecordedTime = "00:00:00"; // 新增一個變數來存計時結果
+
+            function updateTime(){
+                const now = Date.now();
+                const diff = now - startTime;
+
+                const mins = Math.floor(diff / 60000);
+                const secs = Math.floor((diff % 60000) / 1000);
+                const millisecs = Math.floor((diff % 1000) / 10);
+
+                lastRecordedTime = 
+                    String(mins).padStart(2, "0") + ":" +
+                    String(secs).padStart(2, "0") + ":" +
+                    String(millisecs).padStart(2, "0"); // 更新全域變數
+
+                $("#timer").text(lastRecordedTime);
+            }
+
+
+            // 洗牌算法 (Fisher-Yates 洗牌演算法)
+            for(let i = cardArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cardArray[i], cardArray[j]] = [cardArray[j], cardArray[i]];
+            }
+
+            // 禁用遊戲開始前的翻牌，設定按鈕樣式
+            $(".container").css("pointer-events","none");
+            $(".start").addClass("button-active");
+            $(".restart").addClass("button-disable");
+
+            // 生成卡片
+            cardArray.forEach(num => {
+                $(".container").append(`
+                    <div class="card card${num}" data-card="${num}">
+                        <div class="front"></div>
+                        <div class="back"></div>
+                    </div>
+                `);
+            });
+
+            // 開始按鈕點擊事件
+            $(".start").click(function(){
+                $(".container").css("pointer-events","auto");
+                $(".start").addClass("button-disable");
+
+                if(!isRunning){
+                    startTime = Date.now();
+                    TimeInterval = setInterval(updateTime, 10);
+                    isRunning = true;
+                }
+            });
+
+            // 翻牌事件
+            $(".card").click(function() {
+                if ($(this).hasClass("flipped") || flippedCards.length >= 2) return; // 避免點擊已翻開的卡片或翻第三張
+                
+                $(this).addClass("flipped");
+                flippedCards.push($(this));
+
+                if (flippedCards.length === 2) {
+                    $(".container").addClass("cursor"); // 禁用鼠標，防止快速點擊翻開第三張
+                    
+                    if (flippedCards[0].data("card") === flippedCards[1].data("card")) {
+                        // 若兩張卡片匹配
+                        flippedCards = [];
+                        $(".container").removeClass("cursor");
+                    } else {
+                        // 若配對失敗，0.5秒後翻回背面
+                        setTimeout(function(){
+                            flippedCards[0].removeClass("flipped");
+                            flippedCards[1].removeClass("flipped");
+                            flippedCards = [];
+                            $(".container").removeClass("cursor");
+                        }, 500);
+                    }
+                }
+
+                // 檢查遊戲是否結束
+                if($(".card.flipped").length === $(".card").length){
+                    if(isRunning){
+                        clearInterval(TimeInterval);
+                        isRunning = false;
+                    }
+                    $(".restart").addClass("button-active").removeClass("button-disable");
+                    $(".container").css("pointer-events","none");
+                    setTimeout(function(){
+                        alert("你贏了，花費時間"+lastRecordedTime+"!");
+                    }, 500);
+                }
+            });
+
+            // 重新開始按鈕點擊事件
+            $(".restart").click(function(){
+                $(".start").addClass("button-active").removeClass("button-disable");
+                $(".restart").addClass("button-disable");
+                $("#timer").text("00:00:00");
+                clearInterval(TimeInterval);
+                isRunning = false;
+                stoppedTime = 0;
+                
+                setTimeout(function(){
+                    // 重新洗牌
+                    cardArray.sort(() => Math.random() - 0.5);
+                },1000)
+                
+                // 重置卡片
+                $(".card").each(function(index){
+                    $(this).removeClass("flipped");
+                    $(this).data("card", cardArray[index]);
+                    $(this).attr("class", "card card" + cardArray[index]);
+                });
+
+                flippedCards = [];
+                $(".container").css("pointer-events","none");
+            });
+        });
+
+    </script>
+</body>
+</html>
